@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="theme-color" content="#FF8FAB">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="雅雅的工作台">
+  <meta name="description" content="雅雅的个人工作台：记账、工作日志、生日提醒、资产管理、存钱计划">
+  <title>雅雅的工作台</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.12/lunar.js"></script>
+</head>
+<body>
+  <div class="app">
+    <!-- Decorative background elements -->
+    <div class="bg-deco bg-flower-1">🌸</div>
+    <div class="bg-deco bg-flower-2">🌿</div>
+    <div class="bg-deco bg-star">⭐</div>
+    <div class="bg-deco bg-heart">💗</div>
+    <div class="bg-deco bg-cloud">☁️</div>
+
+    <header class="app-header">
+      <h1 class="app-title">
+        <span class="title-mascot">🌷</span>
+        雅雅的工作台
+      </h1>
+      <button class="header-btn" data-view="settings" aria-label="设置">⚙️</button>
+    </header>
+
+    <main class="app-main">
+      <!-- ===== Dashboard ===== -->
+      <section id="view-dashboard" class="view active">
+        <div class="greeting-card">
+          <div class="greeting-text">
+            <p id="greeting-time" class="greeting-main">你好呀雅雅 ✨</p>
+            <p id="today-date" class="greeting-sub">今天也要开心</p>
+          </div>
+          <div class="greeting-mascot" id="dashboard-mascot">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <ellipse cx="50" cy="55" rx="34" ry="36" fill="#7AB8FF"/>
+              <circle cx="40" cy="48" r="3.5" fill="#FFFFFF"/>
+              <circle cx="60" cy="48" r="3.5" fill="#FFFFFF"/>
+              <circle cx="40" cy="48" r="1.8" fill="#4A4A4A"/>
+              <circle cx="60" cy="48" r="1.8" fill="#4A4A4A"/>
+              <path d="M42 60 Q50 66 58 60" stroke="#4A4A4A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <ellipse cx="34" cy="58" rx="4" ry="2.5" fill="#FFB6C1" opacity="0.7"/>
+              <ellipse cx="66" cy="58" rx="4" ry="2.5" fill="#FFB6C1" opacity="0.7"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card stat-pink">
+            <span class="stat-icon">💰</span>
+            <div class="stat-value" id="dash-today-spending">¥0.00</div>
+            <div class="stat-label">今日消费</div>
+          </div>
+          <div class="stat-card stat-yellow">
+            <span class="stat-icon">🧾</span>
+            <div class="stat-value" id="dash-month-spending">¥0.00</div>
+            <div class="stat-label">本月消费</div>
+          </div>
+          <div class="stat-card stat-blue">
+            <span class="stat-icon">🎂</span>
+            <div class="stat-value" id="dash-upcoming-events">0</div>
+            <div class="stat-label">近期生日</div>
+          </div>
+        </div>
+
+        <div class="quick-actions">
+          <button class="quick-btn quick-pink" data-view="expenses">
+            <span>＋</span>
+            <div>记一笔</div>
+          </button>
+          <button class="quick-btn quick-yellow" data-view="worklog">
+            <span>📝</span>
+            <div>记工作</div>
+          </button>
+          <button class="quick-btn quick-green" data-view="birthdays">
+            <span>🎂</span>
+            <div>记生日</div>
+          </button>
+          <button class="quick-btn quick-blue" data-view="savings">
+            <span>💎</span>
+            <div>资产</div>
+          </button>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <h3>🎈 即将到来的生日</h3>
+            <button class="btn-link" data-view="birthdays">查看全部</button>
+          </div>
+          <div id="dash-upcoming-list" class="dash-list">
+            <p class="empty-hint">近期没有生日 🌸</p>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <h3>💎 资产总览</h3>
+            <button class="btn-link" data-view="savings">查看全部</button>
+          </div>
+          <div id="dash-savings-list" class="dash-list">
+            <p class="empty-hint">还没有添加账户哦</p>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <h3>💼 最近工作记录</h3>
+            <button class="btn-link" data-view="worklog">查看全部</button>
+          </div>
+          <div id="dash-recent-worklogs" class="dash-list">
+            <p class="empty-hint">还没有工作记录哦</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Expenses ===== -->
+      <section id="view-expenses" class="view">
+        <div class="section-card form-card">
+          <div class="form-card-header">
+            <h3>✏️ 快速记账</h3>
+          </div>
+          <div class="smart-fill-bar" data-form="expense">
+            <input type="text" class="smart-fill-input" placeholder="✨ 智能填写：输入「午饭20」自动填表">
+            <button type="button" class="smart-fill-btn">填写</button>
+          </div>
+          <form id="expense-form">
+            <div class="form-group form-amount">
+              <label>金额</label>
+              <div class="amount-input">
+                <span class="currency">¥</span>
+                <input type="number" id="exp-amount" step="0.01" placeholder="0.00" required inputmode="decimal">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>分类</label>
+                <select id="exp-category" required></select>
+              </div>
+              <div class="form-group">
+                <label>日期</label>
+                <input type="date" id="exp-date" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>备注（可选）</label>
+              <input type="text" id="exp-note" placeholder="比如：奶茶、打车...">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">✨ 记一笔</button>
+          </form>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <h3>📋 消费记录</h3>
+            <span class="section-summary" id="exp-summary">合计 ¥0.00</span>
+          </div>
+          <div class="filter-row">
+            <input type="month" id="exp-filter-month" class="filter-input">
+            <select id="exp-filter-category" class="filter-input">
+              <option value="">全部分类</option>
+            </select>
+          </div>
+          <div id="expense-list" class="expense-list"></div>
+        </div>
+      </section>
+
+      <!-- ===== Work Log ===== -->
+      <section id="view-worklog" class="view">
+        <div class="section-card form-card">
+          <div class="form-card-header">
+            <h3>📝 记录项目修改</h3>
+          </div>
+          <form id="worklog-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label>项目名称</label>
+                <input type="text" id="wl-project" list="project-list" placeholder="输入或选择项目" required>
+                <datalist id="project-list"></datalist>
+              </div>
+              <div class="form-group">
+                <label>客户</label>
+                <input type="text" id="wl-client" placeholder="客户名称" required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>修改类型</label>
+                <select id="wl-type" required></select>
+              </div>
+              <div class="form-group">
+                <label>日期</label>
+                <input type="date" id="wl-date" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>修改内容</label>
+              <textarea id="wl-description" rows="3" placeholder="写清楚改了什么，方便以后查找..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">💾 保存记录</button>
+          </form>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <h3>📁 项目记录</h3>
+          </div>
+          <div class="filter-row">
+            <input type="text" id="wl-search" class="filter-input filter-grow" placeholder="搜索项目、客户、内容...">
+          </div>
+          <div id="worklog-list" class="worklog-list"></div>
+        </div>
+      </section>
+
+      <!-- ===== Birthdays ===== -->
+      <section id="view-birthdays" class="view">
+        <div class="section-card form-card">
+          <div class="form-card-header">
+            <h3>🎂 添加好友生日</h3>
+          </div>
+          <div class="smart-fill-bar" data-form="birthday">
+            <input type="text" class="smart-fill-input" placeholder="✨ 智能填写：输入「笑笑2000.10.06阴历」">
+            <button type="button" class="smart-fill-btn">填写</button>
+          </div>
+          <form id="birthday-form">
+            <div class="form-group">
+              <label>好友名字</label>
+              <input type="text" id="bd-name" placeholder="比如：小雅" required>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>生日类型</label>
+                <select id="bd-type">
+                  <option value="solar">🌞 阳历</option>
+                  <option value="lunar">🌙 阴历</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>生日日期</label>
+                <input type="date" id="bd-date" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>备注（可选）</label>
+              <input type="text" id="bd-notes" placeholder="比如：喜欢粉色、爱吃蛋糕...">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">🎉 添加生日</button>
+          </form>
+        </div>
+
+        <div class="section-card">
+          <div class="birthday-tabs">
+            <button class="tab-btn active" data-tab="upcoming">即将到来</button>
+            <button class="tab-btn" data-tab="all">全部好友</button>
+          </div>
+          <div id="birthday-list" class="birthday-list"></div>
+        </div>
+      </section>
+
+      <!-- ===== Assets & Savings ===== -->
+      <section id="view-savings" class="view">
+        <!-- Tab switcher -->
+        <div class="asset-tabs">
+          <button class="tab-btn active" data-asset-tab="assets">📊 资产管理</button>
+          <button class="tab-btn" data-asset-tab="savings">🎯 存钱计划</button>
+        </div>
+
+        <!-- Tab 1: Asset Management -->
+        <div id="asset-tab-assets" class="asset-tab-content active">
+          <!-- Net worth overview -->
+          <div class="section-card net-worth-card">
+            <div class="net-worth-main">
+              <div class="net-worth-label">💎 净资产</div>
+              <div class="net-worth-value" id="net-worth-value">¥0.00</div>
+            </div>
+            <div class="net-worth-sub">
+              <div class="net-worth-item">
+                <span class="net-worth-item-label">💰 总资产</span>
+                <span class="net-worth-item-value asset-color" id="total-assets-value">¥0.00</span>
+              </div>
+              <div class="net-worth-item">
+                <span class="net-worth-item-label">💸 总负债</span>
+                <span class="net-worth-item-value liability-color" id="total-liabilities-value">¥0.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add account form -->
+          <div class="section-card form-card">
+            <div class="form-card-header">
+              <h3>➕ 添加账户</h3>
+            </div>
+            <form id="account-form">
+              <div class="form-group">
+                <label>账户名称</label>
+                <input type="text" id="ac-name" placeholder="比如：支付宝、微信、银行卡..." required>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>类型</label>
+                  <select id="ac-type" required>
+                    <option value="asset">💰 资产</option>
+                    <option value="liability">💸 负债</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>金额</label>
+                  <div class="amount-input">
+                    <span class="currency">¥</span>
+                    <input type="number" id="ac-balance" step="0.01" placeholder="0.00" required inputmode="decimal">
+                  </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>备注（可选）</label>
+                <input type="text" id="ac-notes" placeholder="比如：工资卡、信用卡...">
+              </div>
+              <button type="submit" class="btn btn-primary btn-block">添加账户</button>
+            </form>
+          </div>
+
+          <!-- Account list -->
+          <div class="section-card">
+            <div class="section-header">
+              <h3>📋 我的账户</h3>
+            </div>
+            <div id="account-list" class="account-list"></div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Savings Goals -->
+        <div id="asset-tab-savings" class="asset-tab-content">
+          <div class="section-card form-card">
+            <div class="form-card-header">
+              <h3>🎯 添加存钱目标</h3>
+            </div>
+            <form id="savings-form">
+              <div class="form-group">
+                <label>目标名称</label>
+                <input type="text" id="sg-name" placeholder="比如：2026年存钱计划" required>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>目标金额</label>
+                  <div class="amount-input">
+                    <span class="currency">¥</span>
+                    <input type="number" id="sg-target" step="0.01" placeholder="0.00" required inputmode="decimal">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>已存金额</label>
+                  <div class="amount-input">
+                    <span class="currency">¥</span>
+                    <input type="number" id="sg-saved" step="0.01" placeholder="0.00" inputmode="decimal">
+                  </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>备注（可选）</label>
+                <input type="text" id="sg-notes" placeholder="比如：每月存 1000...">
+              </div>
+              <button type="submit" class="btn btn-primary btn-block">🌟 添加目标</button>
+            </form>
+          </div>
+
+          <div class="section-card">
+            <div class="section-header">
+              <h3>🎯 我的存钱目标</h3>
+            </div>
+            <div id="savings-list" class="savings-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Settings ===== -->
+      <section id="view-settings" class="view">
+        <div class="section-card">
+          <div class="section-header">
+            <h3>🏷️ 消费分类</h3>
+          </div>
+          <div id="category-tags" class="tag-list"></div>
+          <div class="tag-add-row">
+            <input type="text" id="new-category" placeholder="新分类">
+            <button type="button" class="btn btn-primary" id="btn-add-category">添加</button>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <h3>🔔 支付检测</h3>
+          </div>
+          <label class="toggle-row">
+            <span>检测剪贴板/页面中的支付信息</span>
+            <input type="checkbox" id="setting-monitor" class="toggle-input">
+            <span class="toggle-slider"></span>
+          </label>
+          <p class="setting-hint">开启后，当从其他应用切回工作台时，会检查剪贴板里是否包含「支付¥XXX」之类的消费信息，并弹窗提醒记账。无法直接监控微信/支付宝 App 内部。</p>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <h3>🔔 消息推送</h3>
+          </div>
+          <div class="setting-input-row">
+            <label class="setting-label">服务器地址</label>
+            <input type="url" id="setting-backend-url" placeholder="https://your-backend.onrender.com" class="setting-input">
+          </div>
+          <label class="toggle-row">
+            <span>开启推送提醒</span>
+            <input type="checkbox" id="setting-push" class="toggle-input">
+            <span class="toggle-slider"></span>
+          </label>
+          <p class="setting-hint" id="push-status">开启后，每天 21:00 提醒记账，好友生日提前 7 天 + 当天提醒。需要将 App 添加到主屏幕并允许通知权限。</p>
+          <div class="setting-actions" id="push-actions" style="display:none;">
+            <button class="btn btn-outline" id="btn-test-push">测试推送</button>
+            <button class="btn btn-outline" id="btn-sync-now">立即同步</button>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <h3>💾 数据管理</h3>
+          </div>
+          <div class="setting-actions">
+            <button class="btn btn-outline" id="btn-export">📤 导出数据</button>
+            <button class="btn btn-outline" id="btn-import-trigger">📥 导入数据</button>
+            <input type="file" id="import-file" accept="application/json" hidden>
+          </div>
+          <div class="data-stats" id="data-stats"></div>
+        </div>
+
+        <div class="section-card">
+          <button class="btn btn-danger btn-block" id="btn-clear">🗑️ 清空所有数据</button>
+        </div>
+
+        <div class="section-card about-card">
+          <p>🌸 雅雅的工作台 v2.15</p>
+          <p class="about-hint">数据保存在本机浏览器 + 云端同步推送。重装系统或清理浏览器前记得导出备份。</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <a href="#" class="nav-item active" data-view="dashboard">
+        <span class="nav-icon">🏠</span>
+        <span>概览</span>
+      </a>
+      <a href="#" class="nav-item" data-view="expenses">
+        <span class="nav-icon">💰</span>
+        <span>记账</span>
+      </a>
+      <a href="#" class="nav-item" data-view="worklog">
+        <span class="nav-icon">💼</span>
+        <span>工作</span>
+      </a>
+      <a href="#" class="nav-item" data-view="birthdays">
+        <span class="nav-icon">🎂</span>
+        <span>生日</span>
+      </a>
+      <a href="#" class="nav-item" data-view="savings">
+        <span class="nav-icon">💎</span>
+        <span>资产</span>
+      </a>
+    </nav>
+
+    <!-- Payment Detection Popup -->
+    <div id="payment-popup" class="payment-popup hidden">
+      <div class="popup-content">
+        <button class="popup-close" id="popup-close">×</button>
+        <div class="popup-icon">💸</div>
+        <div class="popup-text">
+          <div class="popup-title">检测到消费信息</div>
+          <div class="popup-amount" id="popup-amount">¥0.00</div>
+          <div class="popup-context" id="popup-context"></div>
+        </div>
+        <button class="btn btn-primary btn-block" id="popup-log">记一笔</button>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast-container"></div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('service-worker.js', { updateViaCache: 'none' })
+        .then((registration) => registration.update())
+        .catch(() => {});
+    }
+  </script>
+</body>
+</html>

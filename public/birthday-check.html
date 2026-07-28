@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>雅雅的生日提醒 🎂</title>
+  <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.12/lunar.js"></script>
+  <style>
+    :root {
+      --pink: #FFB7C5;
+      --pink-dark: #FF8FAB;
+      --yellow: #FFE4A1;
+      --blue: #B5DEFF;
+      --green: #C1FBA4;
+      --text: #5A4A5C;
+      --bg: #FFF5F7;
+      --card: #FFFFFF;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .wrap {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 28px 18px 48px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.6rem;
+      color: var(--pink-dark);
+    }
+    .date {
+      margin-top: 6px;
+      font-size: 0.95rem;
+      opacity: 0.85;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 22px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 6px 18px rgba(255, 143, 171, 0.12);
+    }
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .friend {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px dashed #F0E0E5;
+    }
+    .friend:last-child { border-bottom: none; }
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--pink);
+      display: grid;
+      place-items: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+    .info { flex: 1; }
+    .name {
+      font-weight: 600;
+      font-size: 1.05rem;
+    }
+    .meta {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-top: 2px;
+    }
+    .badge {
+      background: var(--yellow);
+      color: var(--text);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge.today {
+      background: var(--pink-dark);
+      color: #fff;
+    }
+    .empty {
+      text-align: center;
+      padding: 24px 0;
+      opacity: 0.7;
+    }
+    .import-box {
+      border: 2px dashed var(--pink);
+      border-radius: 18px;
+      padding: 18px;
+      text-align: center;
+      background: #FFF9FB;
+    }
+    .import-box input {
+      margin-top: 10px;
+    }
+    .note {
+      font-size: 0.8rem;
+      opacity: 0.75;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>🎂 雅雅的生日提醒</h1>
+      <div class="date" id="today-line"></div>
+    </header>
+
+    <div class="card">
+      <h2>🎈 今天过生日的好友</h2>
+      <div id="today-list"></div>
+    </div>
+
+    <div class="card">
+      <h2>🎁 未来 7 天内将要过生日的好友</h2>
+      <div id="upcoming-list"></div>
+    </div>
+
+    <div class="card import-box" id="import-card">
+      <div>如果这里空空如也，可以从工作台导出数据后导入：</div>
+      <input type="file" id="import-file" accept="application/json">
+      <div class="note">在同一浏览器打开时，本页面也会自动读取「雅雅的工作台」里的生日数据。</div>
+    </div>
+  </div>
+
+  <script>
+    const LunarCalendar = {
+      available: typeof Lunar !== 'undefined' && typeof Solar !== 'undefined',
+      lunarToSolar(year, month, day) {
+        if (!this.available) return null;
+        try {
+          const solar = Lunar.fromYmd(year, month, day).getSolar();
+          return { year: solar.getYear(), month: solar.getMonth(), day: solar.getDay() };
+        } catch (e) { return null; }
+      },
+      getNextLunarDate(month, day) {
+        if (!this.available) return null;
+        const today = new Date(); today.setHours(0,0,0,0);
+        let solar = this.lunarToSolar(today.getFullYear(), month, day);
+        if (!solar) return null;
+        let date = new Date(solar.year, solar.month - 1, solar.day);
+        if (date < today) {
+          solar = this.lunarToSolar(today.getFullYear() + 1, month, day);
+          if (!solar) return null;
+          date = new Date(solar.year, solar.month - 1, solar.day);
+        }
+        return date;
+      },
+      formatLunarDate(month, day) {
+        const months = ['正','二','三','四','五','六','七','八','九','十','冬','腊'];
+        const days = ['初一','初二','初三','初四','初五','初六','初七','初八','初九','初十',
+                      '十一','十二','十三','十四','十五','十六','十七','十八','十九','二十',
+                      '廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十'];
+        return `${months[month-1]}月${days[day-1]}`;
+      }
+    };
+
+    function fmtDate(d) {
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+    function fmtCN(d) {
+      return `${d.getMonth()+1}月${d.getDate()}日`;
+    }
+
+    function getNextDate(b) {
+      const today = new Date(); today.setHours(0,0,0,0);
+      if (b.type === 'solar') {
+        const cy = today.getFullYear();
+        let d = new Date(cy, b.month - 1, b.day);
+        if (d < today) d = new Date(cy + 1, b.month - 1, b.day);
+        return d;
+      }
+      return LunarCalendar.getNextLunarDate(b.lunarMonth, b.lunarDay);
+    }
+
+    function render(birthdays) {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const end = new Date(today); end.setDate(today.getDate() + 7);
+
+      const todayList = [];
+      const upcomingList = [];
+
+      birthdays.forEach(b => {
+        const next = getNextDate(b);
+        if (!next) return;
+        const days = Math.round((next - today) / (1000 * 60 * 60 * 24));
+        if (days < 0) return;
+        const dateText = b.type === 'lunar'
+          ? `阴历 ${LunarCalendar.formatLunarDate(b.lunarMonth, b.lunarDay)} · 阳历 ${fmtCN(next)}`
+          : `阳历 ${fmtCN(next)}`;
+        const item = { ...b, next, days, dateText };
+        if (days === 0) todayList.push(item);
+        else if (days <= 7) upcomingList.push(item);
+      });
+
+      todayList.sort((a,b) => a.days - b.days);
+      upcomingList.sort((a,b) => a.days - b.days);
+
+      document.getElementById('today-line').textContent =
+        `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日 · 检查未来 7 天`;
+
+      renderList('today-list', todayList, true);
+      renderList('upcoming-list', upcomingList, false);
+
+      if (todayList.length || upcomingList.length) {
+        document.getElementById('import-card').style.display = 'none';
+      }
+    }
+
+    function renderList(id, list, isToday) {
+      const el = document.getElementById(id);
+      if (!list.length) {
+        el.innerHTML = '<div class="empty">暂无 🌸</div>';
+        return;
+      }
+      el.innerHTML = list.map(item => `
+        <div class="friend">
+          <div class="avatar">🎂</div>
+          <div class="info">
+            <div class="name">${escapeHtml(item.name)} ${item.type === 'lunar' ? '🌙' : '☀️'}</div>
+            <div class="meta">${item.dateText}${item.notes ? ' · ' + escapeHtml(item.notes) : ''}</div>
+          </div>
+          <div class="badge ${isToday ? 'today' : ''}">${isToday ? '今天' : item.days + ' 天后'}</div>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str || '';
+      return div.innerHTML;
+    }
+
+    function loadFromStorage() {
+      try {
+        const raw = localStorage.getItem('yaya_birthdays');
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+      return [];
+    }
+
+    function handleFile(file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const data = JSON.parse(e.target.result);
+          const list = Array.isArray(data) ? data : (data.birthdays || []);
+          render(list);
+        } catch (err) {
+          alert('文件格式不对哦，请导出工作台的 JSON 备份');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    const initial = loadFromStorage();
+    if (initial.length) render(initial);
+    else render([]);
+
+    document.getElementById('import-file').addEventListener('change', e => {
+      if (e.target.files[0]) handleFile(e.target.files[0]);
+    });
+  </script>
+</body>
+</html>

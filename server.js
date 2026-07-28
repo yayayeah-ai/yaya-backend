@@ -10,11 +10,13 @@ const { Lunar, Solar } = require('lunar-javascript');
 const app = express();
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
+const PUBLIC_DIR = path.join(__dirname, 'public');
 
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
+app.use(express.static(PUBLIC_DIR));
 
-app.get('/', (req, res) => {
+app.get('/api/status', (req, res) => {
   res.json({ status: 'ok', service: 'yaya-backend', version: '2.0', time: new Date().toISOString() });
 });
 
