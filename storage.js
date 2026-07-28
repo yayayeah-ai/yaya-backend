@@ -31,9 +31,22 @@ function normalizeUserData(value) {
 
 class PostgresStorage {
   constructor(connectionString) {
+    const isLocal = connectionString.includes('localhost');
+    let normalizedConnectionString = connectionString;
+
+    if (!isLocal) {
+      const databaseUrl = new URL(connectionString);
+      // `pg` lets sslmode from the URL override the explicit ssl object. Aiven's
+      // free tier uses its own CA, so remove URL-level SSL flags and keep the
+      // encrypted connection configured below.
+      databaseUrl.searchParams.delete('sslmode');
+      databaseUrl.searchParams.delete('uselibpqcompat');
+      normalizedConnectionString = databaseUrl.toString();
+    }
+
     this.pool = new Pool({
-      connectionString,
-      ssl: connectionString.includes('localhost') ? false : { rejectUnauthorized: false }
+      connectionString: normalizedConnectionString,
+      ssl: isLocal ? false : { rejectUnauthorized: false }
     });
   }
 
