@@ -1,7 +1,7 @@
 {
   "name": "yaya-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "雅雅工作台后端 - 推送通知服务",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -10,11 +10,14 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
     "lunar-javascript": "^1.7.7",
-    "node-cron": "^4.6.0",
+    "node-cron": "^3.0.3",
     "web-push": "^3.6.7"
   }
 }
