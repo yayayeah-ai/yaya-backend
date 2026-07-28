@@ -1,5 +1,5 @@
 /* ============================================================
-   雅雅的工作台 v2.5 - Core Application
+   笑笑的工作台 - Core Application
    Mobile-first PWA with cute pastel style
    Features: Expenses, Work Logs, Birthdays, Savings Goals,
    Smart Form (natural language fill)
@@ -8,7 +8,7 @@
 /* ===== Constants ===== */
 const DEFAULT_CATEGORIES = ['餐饮', '交通', '购物', '娱乐', '住房', '医疗', '教育', '通讯', '其他'];
 const DEFAULT_BACKEND_URL = 'https://yaya-backend-21za.onrender.com';
-const WORKSPACE_ID = 'yaya';
+const WORKSPACE_ID = 'xiaoxiao';
 
 // 分类关键词映射，让智能填写更准确地自动归类
 const CATEGORY_KEYWORDS = {
@@ -39,12 +39,12 @@ const CAT_ICONS = {
 /* ===== Store (Data Layer) ===== */
 const Store = {
   KEYS: {
-    expenses: 'yaya_expenses_v2',
-    worklogs: 'yaya_worklogs_v2',
-    birthdays: 'yaya_birthdays',
-    savings: 'yaya_savings',
-    accounts: 'yaya_accounts',
-    settings: 'yaya_settings_v2_5'
+    expenses: 'xiaoxiao_expenses_v2',
+    worklogs: 'xiaoxiao_worklogs_v2',
+    birthdays: 'xiaoxiao_birthdays',
+    savings: 'xiaoxiao_savings',
+    accounts: 'xiaoxiao_accounts',
+    settings: 'xiaoxiao_settings_v2_5'
   },
 
   get(key, def) {
@@ -326,11 +326,11 @@ const UI = {
 
   getGreeting() {
     const hour = new Date().getHours();
-    if (hour < 6) return '夜深了雅雅 🌙';
-    if (hour < 11) return '早上好雅雅 ☀️';
-    if (hour < 14) return '中午好雅雅 🍱';
-    if (hour < 18) return '下午好雅雅 🌤️';
-    return '晚上好雅雅 🌆';
+    if (hour < 6) return '夜深了笑笑 🌙';
+    if (hour < 11) return '早上好笑笑 ☀️';
+    if (hour < 14) return '中午好笑笑 🍱';
+    if (hour < 18) return '下午好笑笑 🌤️';
+    return '晚上好笑笑 🌆';
   }
 };
 
@@ -1168,7 +1168,7 @@ function renderSettings() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `yaya-workbench-${UI.todayStr()}.json`;
+    a.download = `xiaoxiao-workbench-${UI.todayStr()}.json`;
     a.click();
     URL.revokeObjectURL(url);
     UI.toast('数据已导出 📤', 'success');

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yaya-workbench-v2-16';
+const CACHE_NAME = 'xiaoxiao-workbench-v2-16';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -63,14 +63,14 @@ self.addEventListener('push', (event) => {
     body: payload.body || '',
     icon: payload.icon || './icon-192.png',
     badge: './icon-192.png',
-    tag: payload.tag || 'yaya-notification',
+    tag: payload.tag || 'xiaoxiao-notification',
     data: payload.data || {},
     requireInteraction: payload.requireInteraction || false,
     vibrate: [200, 100, 200]
   };
 
   event.waitUntil(
-    self.registration.showNotification(payload.title || '雅雅的工作台', options)
+    self.registration.showNotification(payload.title || '笑笑的工作台', options)
   );
 });
 

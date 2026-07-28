@@ -30,16 +30,48 @@ webpush.setVapidDetails(
 );
 
 const DATA_FILE = path.join(__dirname, 'data.json');
+const WORKSPACE_CONFIG = {
+  yaya: { name: '雅雅', basePath: '' },
+  xiaoxiao: { name: '笑笑', basePath: '/xiaoxiao' }
+};
+
+function emptyWorkspace() {
+  return { subscriptions: [], birthdays: [], lastSync: null };
+}
+
+function normalizeData(raw) {
+  if (raw && raw.workspaces) {
+    for (const workspaceId of Object.keys(WORKSPACE_CONFIG)) {
+      raw.workspaces[workspaceId] = {
+        ...emptyWorkspace(),
+        ...(raw.workspaces[workspaceId] || {})
+      };
+    }
+    return raw;
+  }
+
+  return {
+    workspaces: {
+      yaya: {
+        ...emptyWorkspace(),
+        subscriptions: raw?.subscriptions || [],
+        birthdays: raw?.birthdays || [],
+        lastSync: raw?.lastSync || null
+      },
+      xiaoxiao: emptyWorkspace()
+    }
+  };
+}
 
 function loadData() {
   try {
     if (fs.existsSync(DATA_FILE)) {
-      return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+      return normalizeData(JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8')));
     }
   } catch (e) {
     console.error('Load data error:', e.message);
   }
-  return { subscriptions: [], birthdays: [], lastSync: null };
+  return normalizeData(null);
 }
 
 function saveData(data) {
@@ -48,6 +80,16 @@ function saveData(data) {
   } catch (e) {
     console.error('Save data error:', e.message);
   }
+}
+
+function getWorkspaceId(value) {
+  return Object.prototype.hasOwnProperty.call(WORKSPACE_CONFIG, value) ? value : 'yaya';
+}
+
+function getWorkspace(data, workspaceId) {
+  const id = getWorkspaceId(workspaceId);
+  data.workspaces[id] ||= emptyWorkspace();
+  return data.workspaces[id];
 }
 
 function getNextBirthdayDate(birthday) {
@@ -92,7 +134,7 @@ function formatDateFull(date) {
   return `${m}月${d}日 星期${weekdays[date.getDay()]}`;
 }
 
-async function sendPush(subscription, payload) {
+async function sendPush(workspaceId, subscription, payload) {
   try {
     await webpush.sendNotification(subscription, JSON.stringify(payload));
     return true;
@@ -100,32 +142,37 @@ async function sendPush(subscription, payload) {
     console.error('Push error:', e.statusCode, e.message);
     if (e.statusCode === 410 || e.statusCode === 404) {
       const data = loadData();
-      data.subscriptions = data.subscriptions.filter(s => s.endpoint !== subscription.endpoint);
+      const workspace = getWorkspace(data, workspaceId);
+      workspace.subscriptions = workspace.subscriptions.filter(s => s.endpoint !== subscription.endpoint);
       saveData(data);
     }
     return false;
   }
 }
 
-async function sendToAll(payload) {
+async function sendToAll(workspaceId, payload) {
   const data = loadData();
-  if (data.subscriptions.length === 0) {
-    console.log('No subscriptions, skipping push');
+  const workspace = getWorkspace(data, workspaceId);
+  if (workspace.subscriptions.length === 0) {
+    console.log(`No subscriptions for ${workspaceId}, skipping push`);
     return;
   }
-  console.log(`Sending push to ${data.subscriptions.length} device(s):`, payload.title);
-  for (const sub of data.subscriptions) {
-    await sendPush(sub, payload);
+  console.log(`Sending ${workspaceId} push to ${workspace.subscriptions.length} device(s):`, payload.title);
+  for (const sub of workspace.subscriptions) {
+    await sendPush(workspaceId, sub, payload);
   }
 }
 
 app.get('/api/health', (req, res) => {
   const data = loadData();
+  const workspaceId = getWorkspaceId(req.query.workspaceId);
+  const workspace = getWorkspace(data, workspaceId);
   res.json({
     status: 'ok',
-    subscriptions: data.subscriptions.length,
-    birthdays: data.birthdays.length,
-    lastSync: data.lastSync
+    workspaceId,
+    subscriptions: workspace.subscriptions.length,
+    birthdays: workspace.birthdays.length,
+    lastSync: workspace.lastSync
   });
 });
 
@@ -134,53 +181,62 @@ app.get('/api/vapid-public-key', (req, res) => {
 });
 
 app.post('/api/subscribe', (req, res) => {
-  const subscription = req.body;
+  const workspaceId = getWorkspaceId(req.body?.workspaceId);
+  const subscription = req.body?.subscription || req.body;
   if (!subscription || !subscription.endpoint) {
     return res.status(400).json({ error: 'Invalid subscription' });
   }
   const data = loadData();
-  const exists = data.subscriptions.some(s => s.endpoint === subscription.endpoint);
+  const workspace = getWorkspace(data, workspaceId);
+  const exists = workspace.subscriptions.some(s => s.endpoint === subscription.endpoint);
   if (!exists) {
-    data.subscriptions.push(subscription);
+    workspace.subscriptions.push(subscription);
     saveData(data);
-    console.log('New subscription added, total:', data.subscriptions.length);
+    console.log(`New ${workspaceId} subscription added, total:`, workspace.subscriptions.length);
   }
-  res.json({ success: true, total: data.subscriptions.length });
+  res.json({ success: true, workspaceId, total: workspace.subscriptions.length });
 });
 
 app.post('/api/sync', (req, res) => {
-  const { birthdays } = req.body;
+  const { birthdays } = req.body || {};
+  const workspaceId = getWorkspaceId(req.body?.workspaceId);
   if (!Array.isArray(birthdays)) {
     return res.status(400).json({ error: 'Invalid data' });
   }
   const data = loadData();
-  data.birthdays = birthdays;
-  data.lastSync = new Date().toISOString();
+  const workspace = getWorkspace(data, workspaceId);
+  workspace.birthdays = birthdays;
+  workspace.lastSync = new Date().toISOString();
   saveData(data);
-  console.log(`Synced ${birthdays.length} birthdays at ${data.lastSync}`);
-  res.json({ success: true, count: birthdays.length });
+  console.log(`Synced ${birthdays.length} ${workspaceId} birthdays at ${workspace.lastSync}`);
+  res.json({ success: true, workspaceId, count: birthdays.length });
 });
 
 app.post('/api/test-push', async (req, res) => {
-  await sendToAll({
-    title: '测试通知',
+  const workspaceId = getWorkspaceId(req.body?.workspaceId);
+  const config = WORKSPACE_CONFIG[workspaceId];
+  await sendToAll(workspaceId, {
+    title: `${config.name}的工作台测试通知`,
     body: '这是一条测试推送，如果你看到了说明推送功能正常工作！',
-    icon: '/icon-192.png',
-    tag: 'test'
+    icon: `${config.basePath}/icon-192.png`,
+    tag: `${workspaceId}-test`
   });
-  res.json({ success: true });
+  res.json({ success: true, workspaceId });
 });
 
 app.post('/api/check-birthdays', async (req, res) => {
-  const results = await checkBirthdays();
+  const workspaceId = getWorkspaceId(req.body?.workspaceId);
+  const results = await checkBirthdays(workspaceId);
   res.json(results);
 });
 
-async function checkBirthdays() {
+async function checkBirthdays(workspaceId) {
   const data = loadData();
-  if (data.birthdays.length === 0) {
-    console.log('No birthday data, skipping check');
-    return { checked: 0, sent: 0 };
+  const workspace = getWorkspace(data, workspaceId);
+  const config = WORKSPACE_CONFIG[workspaceId];
+  if (workspace.birthdays.length === 0) {
+    console.log(`No ${workspaceId} birthday data, skipping check`);
+    return { workspaceId, checked: 0, sent: 0 };
   }
 
   const today = new Date();
@@ -191,7 +247,7 @@ async function checkBirthdays() {
   const todayBirthdays = [];
   const upcomingBirthdays = [];
 
-  data.birthdays.forEach(b => {
+  workspace.birthdays.forEach(b => {
     const nextDate = getNextBirthdayDate(b);
     if (!nextDate) return;
     const diffDays = Math.round((nextDate - today) / (1000 * 60 * 60 * 24));
@@ -213,12 +269,12 @@ async function checkBirthdays() {
       return `${b.name} ${dateStr}${lunarStr}`;
     }).join('\n');
 
-    await sendToAll({
+    await sendToAll(workspaceId, {
       title: '今天是生日！',
       body: `${names} 今天过生日！记得送上祝福`,
-      icon: '/icon-192.png',
-      tag: `birthday-today-${todayStr}`,
-      data: { url: '/#birthdays' }
+      icon: `${config.basePath}/icon-192.png`,
+      tag: `${workspaceId}-birthday-today-${todayStr}`,
+      data: { url: `${config.basePath}/#birthdays` }
     });
     console.log('Sent today birthday notification:', names);
   }
@@ -233,43 +289,53 @@ async function checkBirthdays() {
       return `${b.name} ${dateStr}${lunarStr} - 还有${b.diffDays}天`;
     }).join('\n');
 
-    await sendToAll({
+    await sendToAll(workspaceId, {
       title: '生日提醒',
       body: `未来7天有${sorted.length}个生日即将到来`,
-      icon: '/icon-192.png',
-      tag: `birthday-upcoming-${todayStr}`,
-      data: { url: '/#birthdays' }
+      icon: `${config.basePath}/icon-192.png`,
+      tag: `${workspaceId}-birthday-upcoming-${todayStr}`,
+      data: { url: `${config.basePath}/#birthdays` }
     });
     console.log('Sent upcoming birthday notification:', lines);
   }
 
-  const sent = todayBirthdays.length > 0 ? 1 : 0 + upcomingBirthdays.length > 0 ? 1 : 0;
-  return { checked: data.birthdays.length, sent, todayCount: todayBirthdays.length, upcomingCount: upcomingBirthdays.length };
+  const sent = (todayBirthdays.length > 0 ? 1 : 0) + (upcomingBirthdays.length > 0 ? 1 : 0);
+  return {
+    workspaceId,
+    checked: workspace.birthdays.length,
+    sent,
+    todayCount: todayBirthdays.length,
+    upcomingCount: upcomingBirthdays.length
+  };
 }
 
-async function sendExpenseReminder() {
+async function sendExpenseReminder(workspaceId) {
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  const hour = today.getHours();
+  const config = WORKSPACE_CONFIG[workspaceId];
 
-  await sendToAll({
+  await sendToAll(workspaceId, {
     title: '该记账啦',
     body: '今天花了多少？记一笔，别忘记',
-    icon: '/icon-192.png',
-    tag: `expense-${todayStr}`,
-    data: { url: '/#expense' }
+    icon: `${config.basePath}/icon-192.png`,
+    tag: `${workspaceId}-expense-${todayStr}`,
+    data: { url: `${config.basePath}/#expense` }
   });
-  console.log('Sent expense reminder at', new Date().toISOString());
+  console.log(`Sent ${workspaceId} expense reminder at`, new Date().toISOString());
 }
 
 cron.schedule('0 8 * * *', async () => {
   console.log('=== Running birthday check cron ===', new Date().toISOString());
-  await checkBirthdays();
+  for (const workspaceId of Object.keys(WORKSPACE_CONFIG)) {
+    await checkBirthdays(workspaceId);
+  }
 }, { timezone: 'Asia/Shanghai' });
 
 cron.schedule('0 21 * * *', async () => {
   console.log('=== Running expense reminder cron ===', new Date().toISOString());
-  await sendExpenseReminder();
+  for (const workspaceId of Object.keys(WORKSPACE_CONFIG)) {
+    await sendExpenseReminder(workspaceId);
+  }
 }, { timezone: 'Asia/Shanghai' });
 
 process.on('uncaughtException', (err) => {
