@@ -9,9 +9,14 @@ const { Lunar, Solar } = require('lunar-javascript');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const HOST = process.env.HOST || '0.0.0.0';
 
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
+
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', service: 'yaya-backend', time: new Date().toISOString() });
+});
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BHpqLgc1ysKBvjlkzstkYhdOSyd1BakALaGUxBWs4RL2W70w6Lnq9SodxUfQ4SSV5lWw_DwhpXd4Bk2IRKtX9lU';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'GQ-PSniKaVkApbWJjD0agGh5i73TG9_HWFMF3C9y-84';
@@ -265,7 +270,15 @@ cron.schedule('0 21 * * *', async () => {
   await sendExpenseReminder();
 }, { timezone: 'Asia/Shanghai' });
 
-app.listen(PORT, () => {
-  console.log(`Yaya backend running on port ${PORT}`);
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err.message);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled rejection:', reason);
+});
+
+app.listen(PORT, HOST, () => {
+  console.log(`Yaya backend running on ${HOST}:${PORT}`);
   console.log(`Cron jobs: birthday check at 08:00, expense reminder at 21:00 (Asia/Shanghai)`);
 });
