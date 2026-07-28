@@ -1,9 +1,10 @@
-const CACHE_NAME = 'yaya-workbench-v2-16';
+const CACHE_NAME = 'yaya-workbench-v2-18';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './style.css',
-  './app.js',
+  './app.js?v=218',
+  './cloud-sync.js?v=218',
   './manifest.json',
   './icon.svg',
   './icon-192.png',

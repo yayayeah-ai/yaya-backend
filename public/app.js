@@ -58,6 +58,7 @@ const Store = {
 
   set(key, val) {
     localStorage.setItem(key, JSON.stringify(val));
+    window.CloudSync?.schedule();
   },
 
   // --- Expenses ---
@@ -1140,7 +1141,7 @@ function renderSettings() {
     syncBtn.onclick = async () => {
       UI.toast('正在同步...', 'info');
       const ok = await PushNotification.syncData();
-      UI.toast(ok ? '生日数据已同步到云端' : '同步失败，请检查服务器地址', ok ? 'success' : 'error');
+      UI.toast(ok ? '全部数据已同步到云端' : '同步失败，请检查网络连接', ok ? 'success' : 'error');
     };
   }
 
@@ -1719,6 +1720,7 @@ const PushNotification = {
 
       const subscribeRes = await fetch(`${this.BACKEND_URL}/api/subscribe`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ workspaceId: WORKSPACE_ID, subscription: sub })
       });
@@ -1735,21 +1737,7 @@ const PushNotification = {
   },
 
   async syncData() {
-    if (!this.BACKEND_URL) return false;
-    try {
-      const birthdays = Store.getBirthdays();
-      const res = await fetch(`${this.BACKEND_URL}/api/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspaceId: WORKSPACE_ID, birthdays })
-      });
-      if (!res.ok) throw new Error(`同步失败（${res.status}）`);
-      console.log(`Synced ${birthdays.length} birthdays to backend`);
-      return true;
-    } catch (e) {
-      console.error('Sync error:', e);
-      return false;
-    }
+    return window.CloudSync?.flush(true) || false;
   },
 
   async disable() {
@@ -1757,6 +1745,12 @@ const PushNotification = {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
+        await fetch(`${this.BACKEND_URL}/api/unsubscribe`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: sub.endpoint })
+        }).catch(() => {});
         await sub.unsubscribe();
       }
       this._subscribed = false;
@@ -1769,6 +1763,7 @@ const PushNotification = {
     try {
       const res = await fetch(`${this.BACKEND_URL}/api/test-push`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ workspaceId: WORKSPACE_ID })
       });
@@ -1815,7 +1810,9 @@ const PushNotification = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+window.startWorkbench = () => {
+  if (window.__workbenchStarted) return;
+  window.__workbenchStarted = true;
   // Bottom nav events
   document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
     item.addEventListener('click', (e) => {
@@ -1839,4 +1836,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initial render
   renderDashboard();
-});
+};

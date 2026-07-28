@@ -5,19 +5,22 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test/auth-sync.test.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "dependencies": {
-    "cors": "^2.8.5",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.6.1",
     "lunar-javascript": "^1.7.7",
-    "node-cron": "^3.0.3",
+    "node-cron": "^4.6.0",
+    "pg": "^8.22.0",
     "web-push": "^3.6.7"
   }
 }
