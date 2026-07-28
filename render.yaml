@@ -5,12 +5,9 @@ services:
     plan: free
     buildCommand: npm install
     startCommand: node server.js
-    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 3001
       - key: VAPID_PUBLIC_KEY
         value: BHpqLgc1ysKBvjlkzstkYhdOSyd1BakALaGUxBWs4RL2W70w6Lnq9SodxUfQ4SSV5lWw_DwhpXd4Bk2IRKtX9lU
       - key: VAPID_PRIVATE_KEY
