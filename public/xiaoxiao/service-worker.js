@@ -1,10 +1,10 @@
-const CACHE_NAME = 'xiaoxiao-workbench-v2-18';
+const CACHE_NAME = 'xiaoxiao-workbench-v2-19';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './style.css',
-  './app.js?v=218',
-  '../cloud-sync.js?v=218',
+  './style.css?v=219',
+  './app.js?v=219',
+  '../cloud-sync.js?v=219',
   './manifest.json',
   './icon.svg',
   './icon-192.png',
@@ -28,27 +28,31 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
       );
+    }).then(() => self.clients.claim()).then(() => {
+      return self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    }).then((clients) => {
+      return Promise.all(clients.map((client) => client.navigate(client.url)));
     })
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
+
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request).then((response) => {
+    fetch(event.request).then((response) => {
+      if (response.ok) {
         const clone = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
-          if (event.request.url.startsWith('http')) {
-            cache.put(event.request, clone);
-          }
+          cache.put(event.request, clone);
         });
-        return response;
-      });
-    }).catch(() => {
-      return new Response('离线中，请检查网络后重试');
-    })
+      }
+      return response;
+    }).catch(() => caches.match(event.request).then((cached) => {
+      return cached || new Response('离线中，请检查网络后重试');
+    }))
   );
 });
 
