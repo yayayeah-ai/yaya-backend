@@ -6,6 +6,8 @@
     syncing: false,
     dirty: false,
     suspended: false,
+    profileTimer: null,
+    profileRefreshing: false,
 
     get apiUrl() {
       const configured = Store.getSettings().backendUrl || DEFAULT_BACKEND_URL;
@@ -44,8 +46,18 @@
         event.preventDefault();
         this.submitAuth();
       });
+      document.getElementById('profile-form')?.addEventListener('submit', event => {
+        event.preventDefault();
+        this.saveProfile();
+      });
       document.getElementById('btn-logout')?.addEventListener('click', () => this.logout());
-      window.addEventListener('online', () => this.flush());
+      window.addEventListener('online', () => {
+        this.flush();
+        this.refreshProfile();
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') this.refreshProfile();
+      });
     },
 
     setMode(mode) {
@@ -105,9 +117,77 @@
         .some(key => Array.isArray(data[key]) && data[key].length > 0);
     },
 
+    applyIdentity(user) {
+      const fallbackName = WORKSPACE_ID === 'xiaoxiao' ? '笑笑' : '雅雅';
+      const displayName = String(user?.displayName || '').trim() || fallbackName;
+      this.user = { ...user, displayName };
+      window.currentDisplayName = displayName;
+      document.title = `${displayName}的工作台`;
+      document.querySelector('meta[name="apple-mobile-web-app-title"]')
+        ?.setAttribute('content', `${displayName}的工作台`);
+      document.querySelectorAll('[data-workbench-title]').forEach(element => {
+        element.textContent = `${displayName}的工作台`;
+      });
+      const accountName = document.getElementById('account-display-name');
+      const profileInput = document.getElementById('profile-display-name');
+      if (accountName) accountName.textContent = displayName;
+      if (profileInput && document.activeElement !== profileInput) profileInput.value = displayName;
+      const greeting = document.getElementById('greeting-time');
+      if (greeting && typeof UI !== 'undefined') greeting.textContent = UI.getGreeting();
+    },
+
+    async saveProfile() {
+      if (!this.user) return;
+      const input = document.getElementById('profile-display-name');
+      const button = document.getElementById('btn-save-profile');
+      const message = document.getElementById('profile-message');
+      const displayName = input.value.trim();
+      button.disabled = true;
+      message.textContent = '正在保存…';
+      message.className = 'profile-message';
+      try {
+        const result = await this.request('/api/auth/profile', {
+          method: 'PATCH',
+          body: JSON.stringify({ displayName })
+        });
+        this.applyIdentity(result.user);
+        message.textContent = '昵称已同步到所有设备';
+        message.className = 'profile-message success';
+      } catch (error) {
+        message.textContent = error.message;
+        message.className = 'profile-message error';
+      } finally {
+        button.disabled = false;
+      }
+    },
+
+    async refreshProfile() {
+      if (!this.user || this.profileRefreshing) return;
+      this.profileRefreshing = true;
+      try {
+        const result = await this.request('/api/auth/me');
+        if (result.user?.displayName !== this.user.displayName) {
+          this.applyIdentity(result.user);
+          const message = document.getElementById('profile-message');
+          if (message) {
+            message.textContent = '昵称已从其他设备更新';
+            message.className = 'profile-message success';
+          }
+        }
+      } catch (error) {
+        if (error.status === 401) location.reload();
+      } finally {
+        this.profileRefreshing = false;
+      }
+    },
+
+    startProfileRefresh() {
+      clearInterval(this.profileTimer);
+      this.profileTimer = setInterval(() => this.refreshProfile(), 20000);
+    },
+
     async onAuthenticated(user) {
-      this.user = user;
-      document.getElementById('account-display-name').textContent = user.displayName;
+      this.applyIdentity(user);
       document.getElementById('account-email').textContent = user.email;
       this.setStatus('正在同步云端数据…', 'syncing');
       const cloud = await this.request(`/api/data?workspaceId=${encodeURIComponent(WORKSPACE_ID)}`);
@@ -122,6 +202,7 @@
       this.setStatus('已同步到云端', 'synced');
       document.getElementById('auth-screen').classList.add('hidden');
       window.startWorkbench?.();
+      this.startProfileRefresh();
     },
 
     setStatus(text, state = '') {
@@ -183,6 +264,7 @@
 
     async logout() {
       if (!confirm('确定退出当前账号吗？本机数据同步后会被清除。')) return;
+      clearInterval(this.profileTimer);
       await this.flush(true);
       try {
         await this.request('/api/auth/logout', { method: 'POST' });

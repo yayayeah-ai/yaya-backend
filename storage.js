@@ -119,6 +119,17 @@ class PostgresStorage {
     return result.rows[0] || null;
   }
 
+  async updateUserDisplayName(id, displayName) {
+    const result = await this.pool.query(
+      `UPDATE users
+       SET display_name = $2
+       WHERE id = $1
+       RETURNING id, email, display_name AS "displayName", created_at AS "createdAt"`,
+      [id, displayName]
+    );
+    return result.rows[0] || null;
+  }
+
   async createSession(tokenHash, userId, expiresAt) {
     await this.pool.query(
       'INSERT INTO sessions (token_hash, user_id, expires_at) VALUES ($1, $2, $3)',
@@ -286,6 +297,14 @@ class MemoryStorage {
   async findUserById(id) {
     const user = this.users.get(id);
     if (!user) return null;
+    const { passwordHash, ...safe } = user;
+    return safe;
+  }
+
+  async updateUserDisplayName(id, displayName) {
+    const user = this.users.get(id);
+    if (!user) return null;
+    user.displayName = displayName;
     const { passwordHash, ...safe } = user;
     return safe;
   }

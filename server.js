@@ -43,7 +43,7 @@ app.get('/api/status', (req, res) => {
   res.json({
     status: 'ok',
     service: 'yaya-backend',
-    version: '3.0',
+    version: '3.1',
     database: process.env.DATABASE_URL ? 'postgresql' : 'memory',
     pushConfigured: Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY),
     time: new Date().toISOString()
@@ -167,6 +167,22 @@ app.post('/api/auth/logout', async (req, res, next) => {
 
 app.get('/api/auth/me', requireAuth, (req, res) => {
   res.json({ user: publicUser(req.session) });
+});
+
+app.patch('/api/auth/profile', requireAuth, async (req, res, next) => {
+  try {
+    const displayName = String(req.body?.displayName || '').trim();
+    if (!displayName || displayName.length > 30) {
+      return res.status(400).json({ error: '昵称需要 1–30 个字符' });
+    }
+    const user = await storage.updateUserDisplayName(req.session.userId, displayName);
+    if (!user) {
+      return res.status(404).json({ error: '账号不存在' });
+    }
+    res.json({ user: publicUser(user) });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.get('/api/data', requireAuth, async (req, res, next) => {

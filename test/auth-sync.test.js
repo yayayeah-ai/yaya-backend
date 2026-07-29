@@ -37,6 +37,27 @@ async function run() {
     assert.equal(second.response.status, 201);
     const secondCookie = cookieFrom(second.response);
 
+    const secondFirstSession = await jsonRequest(baseUrl, '/api/auth/login', {
+      method: 'POST',
+      body: { email: 'first@example.com', password: 'password-123' }
+    });
+    assert.equal(secondFirstSession.response.status, 200);
+    const secondFirstCookie = cookieFrom(secondFirstSession.response);
+
+    const profile = await jsonRequest(baseUrl, '/api/auth/profile', {
+      method: 'PATCH',
+      cookie: firstCookie,
+      body: { displayName: '小明' }
+    });
+    assert.equal(profile.response.status, 200);
+    assert.equal(profile.data.user.displayName, '小明');
+
+    const refreshedProfile = await jsonRequest(baseUrl, '/api/auth/me', {
+      cookie: secondFirstCookie
+    });
+    assert.equal(refreshedProfile.response.status, 200);
+    assert.equal(refreshedProfile.data.user.displayName, '小明');
+
     const saved = await jsonRequest(baseUrl, '/api/data', {
       method: 'PUT',
       cookie: firstCookie,
@@ -71,7 +92,7 @@ async function run() {
 
     const anonymous = await jsonRequest(baseUrl, '/api/data?workspaceId=yaya');
     assert.equal(anonymous.response.status, 401);
-    console.log('Auth, user isolation, workspace isolation, full sync, and conflict checks passed.');
+    console.log('Auth, profile sync, user isolation, workspace isolation, full sync, and conflict checks passed.');
   } finally {
     await new Promise(resolve => server.close(resolve));
   }

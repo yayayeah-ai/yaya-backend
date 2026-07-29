@@ -327,11 +327,12 @@ const UI = {
 
   getGreeting() {
     const hour = new Date().getHours();
-    if (hour < 6) return '夜深了雅雅 🌙';
-    if (hour < 11) return '早上好雅雅 ☀️';
-    if (hour < 14) return '中午好雅雅 🍱';
-    if (hour < 18) return '下午好雅雅 🌤️';
-    return '晚上好雅雅 🌆';
+    const name = window.currentDisplayName || '雅雅';
+    if (hour < 6) return `夜深了${name} 🌙`;
+    if (hour < 11) return `早上好${name} ☀️`;
+    if (hour < 14) return `中午好${name} 🍱`;
+    if (hour < 18) return `下午好${name} 🌤️`;
+    return `晚上好${name} 🌆`;
   }
 };
 

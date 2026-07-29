@@ -1779,16 +1779,44 @@ body {
 
 .account-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
 }
+.account-info { flex: 1; min-width: 0; }
 .account-label, .account-email, .cloud-sync-status { color: var(--text-muted); font-size: 12px; }
 .account-email { margin-top: 2px; }
 .cloud-sync-status { margin-top: 7px; }
 .cloud-sync-status.syncing { color: #4e86c5; }
 .cloud-sync-status.synced { color: #3a9b73; }
 .cloud-sync-status.offline { color: #d48b35; }
+.profile-form { margin-top: 14px; }
+.profile-form label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.profile-edit-controls { display: flex; gap: 8px; }
+.profile-edit-controls input {
+  min-width: 0;
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-input);
+  color: var(--text);
+}
+.profile-edit-controls .btn { padding: 10px 14px; }
+.profile-message {
+  min-height: 18px;
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.profile-message.success { color: #3a9b73; }
+.profile-message.error { color: #d94b62; }
 
 /* ===== Small Phone Tweaks ===== */
 @media (max-width: 360px) {
