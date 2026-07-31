@@ -23,6 +23,7 @@ const WORKSPACE_CONFIG = {
   xiaoxiao: { name: '笑笑', basePath: '/xiaoxiao' }
 };
 
+const CRON_SECRET = process.env.CRON_SECRET;
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
@@ -370,6 +371,7 @@ async function runBirthdayReminders() {
   let sent = 0;
   for (const target of targets) sent += await checkBirthdaysForTarget(target);
   console.log(`Birthday reminder run complete: ${targets.length} user workspaces, ${sent} pushes`);
+  return { targets: targets.length, sent };
 }
 
 async function runExpenseReminders() {
@@ -387,6 +389,7 @@ async function runExpenseReminders() {
     });
   }
   console.log(`Expense reminder run complete: ${targets.length} user workspaces, ${sent} pushes`);
+  return { targets: targets.length, sent };
 }
 
 app.post('/api/check-birthdays', requireAuth, async (req, res, next) => {
@@ -401,6 +404,42 @@ app.post('/api/check-birthdays', requireAuth, async (req, res, next) => {
       subscriptions
     });
     res.json({ success: true, workspaceId, checked: data.data.birthdays.length, sent });
+  } catch (error) {
+    next(error);
+  }
+});
+
+function requireCronSecret(req, res, next) {
+  if (!CRON_SECRET) {
+    return res.status(503).json({ error: '定时任务密钥尚未配置' });
+  }
+  const authorization = String(req.get('authorization') || '');
+  const provided = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
+  const expectedHash = crypto.createHash('sha256').update(CRON_SECRET).digest();
+  const providedHash = crypto.createHash('sha256').update(provided).digest();
+  if (!provided || !crypto.timingSafeEqual(expectedHash, providedHash)) {
+    return res.status(401).json({ error: '无权执行定时任务' });
+  }
+  next();
+}
+
+app.post('/api/cron/:reminder', requireCronSecret, async (req, res, next) => {
+  try {
+    const runners = {
+      birthdays: runBirthdayReminders,
+      expenses: runExpenseReminders
+    };
+    const runReminder = runners[req.params.reminder];
+    if (!runReminder) {
+      return res.status(404).json({ error: '未知的提醒任务' });
+    }
+    const result = await runReminder();
+    res.json({
+      success: true,
+      reminder: req.params.reminder,
+      ...result,
+      time: new Date().toISOString()
+    });
   } catch (error) {
     next(error);
   }

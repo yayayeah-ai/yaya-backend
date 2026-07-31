@@ -1,4 +1,5 @@
 const assert = require('assert/strict');
+process.env.CRON_SECRET = 'test-cron-secret';
 const { app, storage } = require('../server');
 
 function cookieFrom(response) {
@@ -92,7 +93,24 @@ async function run() {
 
     const anonymous = await jsonRequest(baseUrl, '/api/data?workspaceId=yaya');
     assert.equal(anonymous.response.status, 401);
-    console.log('Auth, profile sync, user isolation, workspace isolation, full sync, and conflict checks passed.');
+
+    const unauthorizedCron = await jsonRequest(baseUrl, '/api/cron/expenses', {
+      method: 'POST'
+    });
+    assert.equal(unauthorizedCron.response.status, 401);
+
+    const cronResponse = await fetch(`${baseUrl}/api/cron/expenses`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-cron-secret' }
+    });
+    const cronData = await cronResponse.json();
+    assert.equal(cronResponse.status, 200);
+    assert.equal(cronData.success, true);
+    assert.equal(cronData.reminder, 'expenses');
+    assert.equal(typeof cronData.targets, 'number');
+    assert.equal(typeof cronData.sent, 'number');
+
+    console.log('Auth, profile sync, user isolation, full sync, conflict, and protected cron checks passed.');
   } finally {
     await new Promise(resolve => server.close(resolve));
   }

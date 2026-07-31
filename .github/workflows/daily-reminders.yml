@@ -1,0 +1,59 @@
+name: Daily push reminders
+
+on:
+  schedule:
+    - cron: '5 8 * * *'
+      timezone: 'Asia/Shanghai'
+    - cron: '5 21 * * *'
+      timezone: 'Asia/Shanghai'
+  workflow_dispatch:
+    inputs:
+      reminder:
+        description: Reminder to send
+        required: true
+        default: expenses
+        type: choice
+        options:
+          - expenses
+          - birthdays
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-push-reminders
+  cancel-in-progress: false
+
+jobs:
+  send-reminder:
+    runs-on: ubuntu-latest
+    env:
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      REMINDER_API: https://yaya-backend-21za.onrender.com/api/cron
+    steps:
+      - name: Select reminder
+        id: reminder
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "kind=${{ inputs.reminder }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event.schedule }}" == "5 8 * * *" ]]; then
+            echo "kind=birthdays" >> "$GITHUB_OUTPUT"
+          else
+            echo "kind=expenses" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Wake Render and send reminder
+        shell: bash
+        run: |
+          test -n "$CRON_SECRET"
+          curl \
+            --fail-with-body \
+            --show-error \
+            --silent \
+            --max-time 240 \
+            --retry 2 \
+            --retry-all-errors \
+            --request POST \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            "$REMINDER_API/${{ steps.reminder.outputs.kind }}"
